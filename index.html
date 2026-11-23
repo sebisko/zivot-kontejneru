@@ -2,7 +2,7 @@
 <html lang="cs">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Život kontejneru</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -31,7 +31,11 @@
 
     * { box-sizing: border-box; }
 
-    html, body { height: 100%; margin: 0; }
+    /* min-height místo height: na nízké obrazovce (mobil na šířku) jde tabulka posunout */
+    html { height: 100%; }
+    body { min-height: 100%; margin: 0; }
+    /* na dotykové obrazovce: žádné přiblížení dvojklepnutím na tlačítka */
+    button { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
 
     body {
       font-family: "Baloo 2", "Comic Sans MS", system-ui, sans-serif;
@@ -370,11 +374,12 @@
       position: fixed;
       inset: 0;
       z-index: 2;
-      display: grid;
-      place-items: center;
+      display: flex;          /* panel uprostřed; když se nevejde (mobil), dá se posunout */
+      overflow-y: auto;
       padding: 16px;
       background: rgba(43, 43, 43, .35);
     }
+    .factory > .panel { margin: auto; }
     .factory[hidden] { display: none; }
     .factory-panel { width: min(540px, 100%); }
     .factory-head {
@@ -563,6 +568,125 @@
       to   { transform: rotate(2deg); }
     }
 
+    /* cedulka vlevo dole: na čem se hraje (počítač / tablet / mobil) */
+    .device-chip {
+      position: fixed;
+      left: calc(12px + env(safe-area-inset-left));
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      z-index: 3;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 12px;
+      background: #fff;
+      border: 3px solid var(--ink);
+      border-radius: 999px;
+      box-shadow: 0 3px 0 var(--ink);
+      font-weight: 700;
+      font-size: .95rem;
+      pointer-events: none;
+    }
+    body:has(#screen-game:not([hidden])) .device-chip { display: none; }
+
+    /* dotykové ovládání ve hře (tablet, mobil): šipky vlevo dole, akce vpravo dole */
+    .game-screen { touch-action: none; -webkit-user-select: none; user-select: none; }
+    .touch-pad { --pb: 56px; --pg: 8px; }
+    .touch-pad[hidden] { display: none; }
+    .pad-arrows, .pad-actions {
+      position: absolute;
+      bottom: calc(12px + env(safe-area-inset-bottom));
+      gap: var(--pg);
+    }
+    .pad-arrows {
+      left: calc(12px + env(safe-area-inset-left));
+      display: grid;
+      grid-template-columns: repeat(3, var(--pb));
+      grid-template-rows: repeat(3, var(--pb));
+      grid-template-areas: ". up ." "left . right" ". down .";
+    }
+    .pad-actions {
+      right: calc(12px + env(safe-area-inset-right));
+      width: calc(3 * var(--pb) + 2 * var(--pg));
+      display: flex;
+      flex-wrap: wrap-reverse;
+      justify-content: flex-end;
+      align-content: flex-start;
+    }
+    .pad-arrows[hidden] { display: none; }
+    .pad-btn {
+      width: var(--pb);
+      height: var(--pb);
+      padding: 0;
+      font: inherit;
+      font-weight: 800;
+      font-size: calc(var(--pb) * .42);
+      line-height: 1;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .85);
+      border: 4px solid var(--ink);
+      border-radius: 16px;
+      box-shadow: 0 4px 0 var(--ink);
+      display: grid;
+      place-items: center;
+      touch-action: none;
+      -webkit-touch-callout: none;
+      -webkit-user-select: none;
+      user-select: none;
+    }
+    .pad-btn[hidden] { display: none; }
+    .pad-btn.wide { width: calc(2 * var(--pb) + var(--pg)); font-size: calc(var(--pb) * .3); }
+    .pad-btn.down { transform: translateY(3px); box-shadow: 0 1px 0 var(--ink); background: #ffd23c; }
+    /* na výšku je pod světem místo pro tlačítka → Zkusit znovu / Menu nad nimi */
+    .game-actions { bottom: calc(20px + var(--pad-h, 0px)); }
+
+    /* mobil na výšku: „Otoč mobil na šířku“ */
+    .rotate-tip {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      display: flex;
+      padding: 16px;
+      background: rgba(43, 43, 43, .55);
+    }
+    .rotate-tip > .panel { margin: auto; width: min(320px, 100%); }
+    .rotate-tip[hidden] { display: none; }
+    .rotate-icon { width: 120px; height: 90px; display: block; margin: 0 auto 4px; }
+
+    /* malé obrazovky (mobil) */
+    @media (max-width: 700px), (max-height: 500px) {
+      .restart-btn { width: 44px; height: 44px; top: 10px; right: 10px; }
+      .restart-btn svg { width: 22px; height: 22px; }
+      .music-btn { right: 62px; }
+      .game-hint {
+        /* vlevo od tlačítek hudby a restartu, uprostřed zbylého místa */
+        top: 8px;
+        left: 10px;
+        right: 116px;
+        transform: none;
+        width: fit-content;
+        max-width: none;
+        margin: 0 auto;
+        padding: 2px 10px;
+        border-width: 3px;
+        font-size: .85rem;
+        line-height: 1.8;
+      }
+      .game-hint kbd { padding: 0 4px; }
+      .factory-head { flex-wrap: wrap; justify-content: center; }
+      .factory-guide { width: 120px; }
+    }
+    /* nízké obrazovky (mobil na šířku): menu se musí vejít celé */
+    @media (max-height: 560px) {
+      .jib { top: 8px; }
+      .trolley { top: 34px; }
+      .menu-stack { top: 46px; gap: 10px; }
+      .cable { height: 16px; }
+      .hang-art { width: min(440px, 88vw, calc((100vh - 210px) * 1.46)); }
+      .menu-stack .next-btn { width: 140px; }
+      .workbench { max-height: 52vh; }
+      .panel { padding: 14px 16px 18px; }
+    }
+
     @media (prefers-reduced-motion: reduce) {
       * { animation: none !important; transition: none !important; }
     }
@@ -571,6 +695,11 @@
 <body>
   <div class="cloud one" aria-hidden="true"></div>
   <div class="cloud two" aria-hidden="true"></div>
+
+  <!-- na čem se hraje: počítač / tablet / mobil (pozná se samo) -->
+  <div class="device-chip" id="device-chip" role="status">
+    <span id="device-icon" aria-hidden="true"></span><span id="device-text"></span>
+  </div>
 
   <!-- restart hry -->
   <button class="restart-btn" id="restart-btn" type="button" aria-label="Restartovat hru" title="Restartovat hru">
@@ -1061,6 +1190,25 @@
       <button class="back-btn" id="game-retry" type="button">Zkusit znovu</button>
       <button class="back-btn" id="game-menu" type="button">Menu</button>
     </div>
+    <!-- dotykové ovládání (tablet, mobil): tlačítka se doplní podle nápovědy -->
+    <div class="touch-pad" id="touch-pad" data-no-tr hidden>
+      <div class="pad-arrows" id="pad-arrows"></div>
+      <div class="pad-actions" id="pad-actions"></div>
+    </div>
+    <!-- mobil na výšku -->
+    <div class="rotate-tip" id="rotate-tip" hidden>
+      <div class="panel">
+        <svg class="rotate-icon" viewBox="0 0 120 90" aria-hidden="true">
+          <rect x="12" y="22" width="34" height="58" rx="6" fill="#fff" stroke="#2b2b2b" stroke-width="4"/>
+          <rect x="58" y="44" width="56" height="34" rx="6" fill="#3d8bfd" stroke="#2b2b2b" stroke-width="4"/>
+          <path d="M34 14 Q76 2 92 32" fill="none" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round"/>
+          <path d="M80 30 l12 4 l3 -12" fill="none" stroke="#2b2b2b" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <p class="ask-text">Otoč mobil na šířku</p>
+        <p class="subtitle">Na šířku se hra lépe ovládá.</p>
+        <button class="back-btn" id="rotate-ok" type="button">Hrát i tak</button>
+      </div>
+    </div>
   </section>
 
   <script>
@@ -1123,6 +1271,13 @@
       ["Díky za hraní!", "Thanks for playing!", "Danke fürs Spielen!", "Dzięki za grę!"],
       ["Život kontejneru je u konce… nebo začíná znovu?", "The life of the container is over… or is it starting again?", "Das Leben des Containers ist vorbei… oder fängt es wieder an?", "Życie kontenera się skończyło… a może zaczyna się od nowa?"],
       ["Hrát znovu", "Play again", "Nochmal spielen", "Zagraj jeszcze raz"],
+      // --- zařízení (počítač / tablet / mobil) a dotykové ovládání
+      ["Hraješ na počítači", "You're playing on a computer", "Du spielst am Computer", "Grasz na komputerze"],
+      ["Hraješ na tabletu", "You're playing on a tablet", "Du spielst auf dem Tablet", "Grasz na tablecie"],
+      ["Hraješ na mobilu", "You're playing on a phone", "Du spielst auf dem Handy", "Grasz na telefonie"],
+      ["Otoč mobil na šířku", "Turn your phone sideways", "Dreh dein Handy quer", "Obróć telefon poziomo"],
+      ["Na šířku se hra lépe ovládá.", "The game is easier to play in landscape.", "Im Querformat lässt sich das Spiel besser steuern.", "W poziomie łatwiej się gra."],
+      ["Hrát i tak", "Play anyway", "Trotzdem spielen", "Graj mimo to"],
       // --- části hry (tlačítko Pokračovat)
       ["Jeřáb na staveništi", "Crane at the building site", "Kran auf der Baustelle", "Dźwig na placu budowy"],
       ["Kamion u proutěného mostu", "Truck at the wicker bridge", "Laster an der Weidenbrücke", "Ciężarówka przy wiklinowym moście"],
@@ -2089,6 +2244,36 @@
       screenNext.hidden = true;
       screenPick.hidden = false;
     });
+
+    // =====================================================================
+    // Na čem se hraje: počítač, tablet, nebo mobil?
+    // Pozná se podle prohlížeče (user agent), dotykové obrazovky a její velikosti.
+    // Výsledek je v <html data-device="desktop|tablet|mobile"> a na cedulce vlevo dole.
+    // Na tabletu a mobilu se ve hře ukážou dotyková tlačítka (viz createGame).
+    // =====================================================================
+    function detectDevice() {
+      const ua = navigator.userAgent || "";
+      const mq = q => !!window.matchMedia && window.matchMedia(q).matches;
+      const touchPoints = navigator.maxTouchPoints || 0;
+      // iPad se od iPadOS 13 hlásí jako Mac – prozradí ho dotyk
+      if (/iPad/.test(ua) || (/Macintosh/.test(ua) && touchPoints > 1)) return "tablet";
+      if (/Android/.test(ua)) return /Mobile/.test(ua) ? "mobile" : "tablet";
+      if (/iPhone|iPod|Windows Phone|Mobi/i.test(ua) || navigator.userAgentData?.mobile) return "mobile";
+      // jiný systém: když se ovládá hlavně prstem, rozhodne velikost obrazovky
+      if (touchPoints > 0 && mq("(pointer: coarse)") && !mq("(hover: hover)")) {
+        return Math.min(window.screen.width, window.screen.height) < 600 ? "mobile" : "tablet";
+      }
+      return "desktop";
+    }
+    const DEVICE = detectDevice();
+    const DEVICE_INFO = {
+      desktop: ["🖥️", "Hraješ na počítači"],
+      tablet:  ["📲", "Hraješ na tabletu"],
+      mobile:  ["📱", "Hraješ na mobilu"],
+    };
+    document.documentElement.dataset.device = DEVICE;
+    document.getElementById("device-icon").textContent = DEVICE_INFO[DEVICE][0];
+    document.getElementById("device-text").textContent = DEVICE_INFO[DEVICE][1];
 
     // =====================================================================
     // Hra: staveniště – jeřábem polož kontejner na kamion
@@ -6803,9 +6988,22 @@
         const w = window.innerWidth, h = window.innerHeight;
         canvas.width = Math.round(w * dpr);
         canvas.height = Math.round(h * dpr);
-        scale = Math.min(w / WORLD_W, h / WORLD_H) * dpr;
+        // dotyková tlačítka: místo pro ně se nechá buď po stranách (na šířku), nebo pod světem
+        // (na výšku) – podle toho, kde zůstane svět větší
+        let padX = 0, padY = 0;
+        if (touchMode) {
+          const pb = Math.round(Math.max(48, Math.min(76, Math.min(w, h) * 0.11)));
+          touchPad.style.setProperty("--pb", pb + "px");
+          const size = 3 * pb + 2 * 8 + 16;
+          const side = Math.min((w - 2 * size) / WORLD_W, h / WORLD_H);
+          const below = Math.min(w / WORLD_W, (h - size) / WORLD_H);
+          if (side >= below) padX = size; else padY = size;
+        }
+        screen.style.setProperty("--pad-h", padY + "px");
+        scale = Math.min((w - 2 * padX) / WORLD_W, (h - padY) / WORLD_H) * dpr;
         offX = (canvas.width - WORLD_W * scale) / 2;
-        offY = canvas.height - WORLD_H * scale;  // svět přilepený ke spodku
+        offY = canvas.height - padY * dpr - WORLD_H * scale;  // svět přilepený ke spodku (nad tlačítky)
+        updateRotateTip();
       }
 
       function shape(fill, stroke = INK, lw = 4) {
@@ -8901,6 +9099,141 @@
       window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
       window.addEventListener("resize", () => { if (!screen.hidden) resize(); });
 
+      // ------------------------------------------------------------ dotykové ovládání (tablet, mobil)
+      // Na dotykovém zařízení se ve hře ukážou tlačítka: šipky vlevo dole, ostatní klávesy vpravo dole.
+      // Které klávesy jsou potřeba, se pozná z nápovědy nahoře (<kbd>…</kbd>); během jedné části hry
+      // tlačítka jen přibývají (třeba u „otoč ceduli: Q“ je pořád potřeba chodit šipkami).
+      // Tlačítko „zmáčkne“ klávesu stejně jako klávesnice (keydown, a keyup po puštění prstu),
+      // takže hra se ovládá úplně stejně – držet jde i E (magnet) nebo šipky.
+      const touchPad = document.getElementById("touch-pad");
+      const padArrows = document.getElementById("pad-arrows");
+      const padActions = document.getElementById("pad-actions");
+      const rotateTip = document.getElementById("rotate-tip");
+      const ARROWS = { "←": "ArrowLeft", "→": "ArrowRight", "↑": "ArrowUp", "↓": "ArrowDown" };
+      const SPACE_WORDS = ["mezerník", "space", "leertaste", "spacja", "spację"];   // podle jazyka
+      let touchMode = DEVICE !== "desktop";
+      let padStage = null, padSig = "";
+      const padKeys = new Map();   // klávesa → popisek na tlačítku
+      const padBtns = new Map();   // klávesa → tlačítko
+
+      function padKeyOf(label) {
+        const t = label.trim();
+        if (ARROWS[t]) return t;
+        if (SPACE_WORDS.includes(t.toLowerCase())) return " ";
+        if (/^[A-Z]$/.test(t)) return t;
+        return null;
+      }
+      function sendKey(k, down) {
+        const arrow = ARROWS[k];
+        window.dispatchEvent(new KeyboardEvent(down ? "keydown" : "keyup", {
+          key: arrow || (k === " " ? " " : k.toLowerCase()),
+          code: arrow || (k === " " ? "Space" : "Key" + k),
+          bubbles: true,
+          cancelable: true,
+        }));
+      }
+      function releasePadBtn(b) {
+        if (!b.classList.contains("down")) return;
+        b.classList.remove("down");
+        sendKey(b.dataset.key, false);
+      }
+      function makePadBtn(k, parent) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "pad-btn";
+        b.dataset.key = k;
+        b.hidden = true;
+        b.addEventListener("pointerdown", e => {
+          e.preventDefault();
+          try { b.setPointerCapture(e.pointerId); } catch { /* starší prohlížeč */ }
+          if (b.classList.contains("down")) return;
+          b.classList.add("down");
+          sendKey(k, true);
+          navigator.vibrate?.(8);
+        });
+        for (const ev of ["pointerup", "pointercancel", "lostpointercapture"]) {
+          b.addEventListener(ev, () => releasePadBtn(b));
+        }
+        b.addEventListener("contextmenu", e => e.preventDefault());
+        parent.append(b);
+        padBtns.set(k, b);
+        return b;
+      }
+      for (const [k, area] of [["↑", "up"], ["←", "left"], ["→", "right"], ["↓", "down"]]) {
+        const b = makePadBtn(k, padArrows);
+        b.textContent = k;
+        b.style.gridArea = area;
+      }
+
+      // přečte nápovědu a ukáže tlačítka pro klávesy, které jsou v ní
+      function updatePad() {
+        if (!s) return;
+        if (s.stage !== padStage) { padStage = s.stage; padKeys.clear(); }
+        for (const kb of hintEl.querySelectorAll("kbd")) {
+          const k = padKeyOf(kb.textContent);
+          if (k) padKeys.set(k, kb.textContent.trim());
+        }
+        // „Drž E, dokud…“ je v nápovědě bez <kbd>
+        if (/(^|\s)E(?=[\s,.!]|$)/.test(hintEl.textContent)) padKeys.set("E", "E");
+        // druhý dráp naklání kontejner na obě strany: A i D
+        if (s.stage === "claw2" && padKeys.has("D")) padKeys.set("A", "A");
+
+        const show = touchMode && padKeys.size > 0;
+        const sig = show + "|" + [...padKeys].join(",");
+        if (sig === padSig) return;
+        padSig = sig;
+        touchPad.hidden = !show;
+        for (const [k, b] of padBtns) {
+          if (!show || !padKeys.has(k)) { releasePadBtn(b); b.hidden = true; }
+        }
+        if (!show) return;
+        for (const [k, label] of padKeys) {
+          const b = padBtns.get(k) || makePadBtn(k, padActions);
+          if (!ARROWS[k]) {
+            b.textContent = label;
+            b.classList.toggle("wide", k === " ");
+          }
+          b.hidden = false;
+        }
+        padArrows.hidden = ![...padKeys.keys()].some(k => ARROWS[k]);
+      }
+      new MutationObserver(updatePad).observe(hintEl, { childList: true, subtree: true, characterData: true });
+
+      // dotyk zapne tlačítka (i na počítači s dotykovou obrazovkou), skutečná klávesnice je vypne
+      function setTouchMode(on) {
+        if (on === touchMode) return;
+        touchMode = on;
+        padSig = "";
+        updatePad();
+        if (!screen.hidden) resize();
+      }
+      window.addEventListener("pointerdown", e => { if (e.pointerType === "touch") setTouchMode(true); }, true);
+      window.addEventListener("keydown", e => {
+        if (e.isTrusted && !e.target.closest?.("input, textarea")) setTouchMode(false);
+      }, true);
+
+      // mobil na výšku: poradí otočit na šířku (jde zavřít)
+      const portraitMq = window.matchMedia("(orientation: portrait)");
+      let rotateDismissed = false;
+      function updateRotateTip() {
+        rotateTip.hidden = !(DEVICE === "mobile" && portraitMq.matches && !rotateDismissed);
+      }
+      document.getElementById("rotate-ok").addEventListener("click", () => {
+        rotateDismissed = true;
+        updateRotateTip();
+      });
+
+      // na tabletu a mobilu hra na celou obrazovku (mobil se zkusí otočit na šířku)
+      function goFullscreen() {
+        const el = document.documentElement;
+        if (DEVICE === "desktop" || document.fullscreenElement || !el.requestFullscreen) return;
+        try {
+          el.requestFullscreen({ navigationUI: "hide" }).then(() => {
+            if (DEVICE === "mobile") window.screen.orientation?.lock?.("landscape").catch(() => {});
+          }).catch(() => {});
+        } catch { /* bez celé obrazovky */ }
+      }
+
       // Zkusit znovu: po nehodě na cestě se jede znovu od jeřábu s naloženým kontejnerem,
       // jinak se znovu nakládá
       document.getElementById("game-retry").addEventListener("click", e => {
@@ -8926,6 +9259,7 @@
       });
 
       function start() {
+        goFullscreen();   // jen z kliknutí (tlačítko Hra); jinak to prohlížeč potichu odmítne
         screen.hidden = false;
         newRound();
         resize();
@@ -8947,6 +9281,7 @@
         raf = 0;
         screen.hidden = true;
         for (const k in keys) keys[k] = false;
+        for (const b of padBtns.values()) b.classList.remove("down");
       }
 
       // zkratka pro testování: rovnou jízda autem s kontejnerem k drápu
