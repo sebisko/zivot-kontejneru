@@ -1645,13 +1645,30 @@
       audioCtxs.push(c);
       return c;
     }
+    const audioBlocked = c => c.state === "suspended" || c.state === "interrupted";   // interrupted = iPhone
+    // iPhone: bez tohohle hraje Web Audio jen se zapnutým zvoněním (ne v tichém režimu)
+    try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch { /* starší iOS */ }
+    let silentPlayed = false;
     function unlockAudio() {
       for (const c of audioCtxs) {
-        if (c.state !== "suspended") continue;
+        if (!audioBlocked(c)) continue;
         try { Promise.resolve(c.resume()).catch(() => {}); } catch { /* bez zvuku */ }
       }
+      // starší iPhone: krátké tiché <audio> přepne zvuk telefonu na „přehrávání“ (hraje i v tichém režimu)
+      if (!silentPlayed) {
+        silentPlayed = true;
+        try {
+          const a = new Audio("data:audio/wav;base64,UklGRigAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQQAAACAgICA");
+          a.setAttribute("playsinline", "");
+          Promise.resolve(a.play()).catch(() => { silentPlayed = false; });
+        } catch { /* bez zvuku */ }
+      }
     }
-    for (const ev of ["pointerdown", "keydown", "touchstart"]) window.addEventListener(ev, unlockAudio, true);
+    // na dotykové obrazovce pustí prohlížeč zvuk až po dokončeném ťuknutí (pointerup / touchend / click),
+    // ne hned při dotyku – proto se zkouší při všech
+    for (const ev of ["pointerdown", "pointerup", "touchstart", "touchend", "mousedown", "click", "keydown"]) {
+      window.addEventListener(ev, unlockAudio, true);
+    }
     const soundNotice = document.createElement("button");
     soundNotice.type = "button";
     soundNotice.className = "sound-notice";
@@ -1661,7 +1678,7 @@
     document.body.appendChild(soundNotice);
     setInterval(() => {
       const gameOn = !document.getElementById("screen-game").hidden;
-      soundNotice.hidden = !(gameOn && audioCtxs.some(c => c.state === "suspended"));
+      soundNotice.hidden = !(gameOn && audioCtxs.some(audioBlocked));
     }, 500);
 
     // hex se používá při kreslení na canvas ve hře (musí sedět s CSS proměnnými)
@@ -6703,9 +6720,17 @@
         drawKeyPrompt("R", "Zatrub si", (SHIP_L + SHIP_R) / 2, 215);
       }
 
+      // kolečka nakreslená v tomhle snímku: na dotykovém zařízení z nich vzniknou tlačítka
+      // a ťuknutím přímo na kolečko se klávesa zmáčkne
+      const keyPrompts = [];
       // pulzující kolečko s klávesou a text pod ním
       function drawKeyPrompt(letter, text, x, y) {
         const r = 34 * (1 + Math.sin(s.time * 5) * 0.06);
+        if (letter !== "!") {
+          // poloha na canvasu v pixelech (kolečko může být kreslené třeba vůči lodi, ne vůči světu)
+          const m = ctx.getTransform();
+          keyPrompts.push({ key: letter, x: m.a * x + m.c * y + m.e, y: m.b * x + m.d * y + m.f, r: 55 * Math.hypot(m.a, m.b) });
+        }
         circle(x, y, r, "#fff", 5);
         ctx.font = `800 44px ${FONT}`;
         ctx.textAlign = "center";
@@ -7349,6 +7374,7 @@
         const sy = s.shake > 0 ? (Math.random() - 0.5) * 14 * dpr : 0;
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         ctx.clearRect(0, 0, canvas.width, canvas.height);  // nebe s mraky je pod canvasem
+        keyPrompts.length = 0;
 
         // samostatné scény uvnitř: obchod a kuchyň
         if (s.scene) {
@@ -9038,6 +9064,8 @@
         last = t;
         update(dt);
         render();
+        const sig = keyPrompts.map(p => p.key).join();
+        if (sig !== promptSig) { promptSig = sig; updatePad(); }
         raf = requestAnimationFrame(frame);
       }
 
@@ -9085,6 +9113,14 @@
         const r = canvas.getBoundingClientRect();
         const wx = ((e.clientX - r.left) * dpr - offX) / scale + s.camX;
         const wy = ((e.clientY - r.top) * dpr - offY) / scale + s.camY;
+        // ťuknutí na kolečko s klávesou (např. R = zatrub si) = zmáčknutí té klávesy
+        const px = (e.clientX - r.left) * dpr, py = (e.clientY - r.top) * dpr;
+        const hit = keyPrompts.find(p => Math.hypot(px - p.x, py - p.y) <= p.r);
+        if (hit) {
+          sendKey(hit.key, true);
+          setTimeout(() => sendKey(hit.key, false), 150);
+          return;
+        }
         onWorldClick(wx, wy);
       });
 
@@ -9112,7 +9148,7 @@
       const ARROWS = { "←": "ArrowLeft", "→": "ArrowRight", "↑": "ArrowUp", "↓": "ArrowDown" };
       const SPACE_WORDS = ["mezerník", "space", "leertaste", "spacja", "spację"];   // podle jazyka
       let touchMode = DEVICE !== "desktop";
-      let padStage = null, padSig = "";
+      let padStage = null, padSig = "", promptSig = "";
       const padKeys = new Map();   // klávesa → popisek na tlačítku
       const padBtns = new Map();   // klávesa → tlačítko
 
@@ -9175,6 +9211,8 @@
         }
         // „Drž E, dokud…“ je v nápovědě bez <kbd>
         if (/(^|\s)E(?=[\s,.!]|$)/.test(hintEl.textContent)) padKeys.set("E", "E");
+        // klávesy z koleček ve hře (R = zatrub si, V = vysílačka, H = vysyp koš…)
+        for (const p of keyPrompts) if (padKeyOf(p.key)) padKeys.set(p.key, p.key);
         // druhý dráp naklání kontejner na obě strany: A i D
         if (s.stage === "claw2" && padKeys.has("D")) padKeys.set("A", "A");
 
